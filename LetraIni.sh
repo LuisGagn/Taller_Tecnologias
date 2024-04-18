@@ -65,7 +65,6 @@ function consultar_diccionario () {
 	cantidadPalabras=0
 	palabrasTotales=0
 	
-	
 	## Write an remove
 	rm test2.txt
 	output=test2.txt
@@ -80,14 +79,19 @@ function consultar_diccionario () {
 	while IFS= read -r line
 		do
 		
-		
+		if [ ${#line} -ge 3 ]; 
+		then
+
+		echo $line
 		palabra=$(tildes $line) 
 			
 		largo=$((${#palabra})) ## $(()) deja restar $(#a) largo de a 
-
-		inicial=${palabra:0:1}
-		final=${palabra:largo-1:largo}	
-		contenida=${palabra:1:largo-2}
+		
+		
+		## Problemas con palabras menos de 3. usar IFS
+			inicial=${palabra:0:1}
+			final=${palabra:largo-1:largo}	
+			contenida=${palabra:1:-1}
 		
 		if [ $inicial == $letraInicial ] && [ $final == $letraFinal ]; 
 		then
@@ -99,6 +103,7 @@ function consultar_diccionario () {
 			fi
 		fi
 		palabrasTotales=$((palabrasTotales+1))
+	fi
 	done < test.txt
 	
 	

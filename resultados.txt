@@ -266,5 +266,3 @@ atribuiste
 atribuye
 atribuyese
 audible
-Lista de palabras encontradas
-_____________________________

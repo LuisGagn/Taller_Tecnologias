@@ -1,0 +1,121 @@
+#!/bin/bash
+function tildes {
+	palabra=$1
+	sinTildes=${palabra/á/a}	
+	sinTildes=${sinTildes/é/e};
+	sinTildes=${sinTildes/í/i};
+	sinTildes=${sinTildes/ó/o};
+	sinTildes=${sinTildes/ú/u};	
+	echo $sinTildes
+}
+
+function consultar_diccionario() {
+    # Define variables
+    letraInicial="a"
+    letraFinal="o"
+    letraContenida="a"
+    output="test2.txt"
+
+    # Initialize counters
+    cantidadPalabras=0
+    palabrasTotales=0
+
+    # Clear previous output file
+    > "$output"
+
+    # Loop through each word in the dictionary file
+    while IFS= read -r line; do
+        # Skip words with less than 3 characters
+        if [ ${#line} -lt 3 ]; then
+            continue
+        fi
+
+        # Remove accents from the word
+        palabra=$(tildes "$line")
+
+        # Extract first and last characters
+        inicial=${palabra:0:1}
+        final=${palabra: -1}
+
+        # Check if the word meets the conditions
+        if [ "$inicial" = "$letraInicial" ] && [ "$final" = "$letraFinal" ]; then
+            # Get the substring of the word excluding the first and last letters
+            substring=${palabra:1:-1}
+            # Check if the substring contains the specified letter
+            if [[ "$substring" == *"$letraContenida"* ]]; then
+                cantidadPalabras=$((cantidadPalabras+1))
+                echo "$line" >> "$output"
+            fi
+        fi
+
+        palabrasTotales=$((palabrasTotales+1))
+    done < diccionario.txt
+
+    # Calculate percentage of matching words
+    porcentaje=$(bc <<< "scale=2; ($cantidadPalabras * 100) / $palabrasTotales")
+
+    # Write statistics to the output file
+    {
+        echo "$usuario"
+        echo "$(date +%F)"
+        echo "Total de palabras analizadas: $palabrasTotales"
+        echo "$porcentaje% de las palabras coinciden."
+    } | cat - "$output" > temp && mv temp "$output"
+}
+function consultar_diccionario () {
+	letraInicial=a
+	letraFinal=o
+	letraContenida=a
+	## Chequear letras != 0
+	
+	##Contadores
+	cantidadPalabras=0
+	palabrasTotales=0
+	
+	## Write an remove
+	rm test2.txt
+	output=test2.txt
+	echo "" >> test2.txt
+	echo "" >> test2.txt
+	
+	## Lee linea a linea
+	while IFS= read line; 
+		do
+			if [ ${#line} -ge 3 ]; 
+			then
+
+			palabra=$(tildes $line) 
+				
+			largo=$((${#palabra})) ## $(()) deja restar $(#a) largo de a 
+			
+			
+			## Problemas con palabras menos de 3. usar IFS
+
+			
+				inicial=${palabra:0:1}
+				final=${palabra:largo-1:largo}	
+				contenida=$(conte $palabra) || return 1
+			if [ $inicial == $letraInicial ] && [ $final == $letraFinal ]; 
+			then
+
+				if [[ $contenida =~ $letraContenida ]]; 
+				then 
+					cantidadPalabras=$((cantidadPalabras+1))
+					echo $line >> $output
+				fi
+			fi
+			palabrasTotales=$((palabrasTotales+1))
+		fi
+		
+	done < diccionario.txt
+	
+	porcentaje=$(bc <<< "scale=2;($cantidadPalabras*100)/$palabrasTotales")
+	sed -i '1s/^/'"$porcentaje% de las palabras coinciden."'\n/' test2.txt
+	sed -i '1s/^/'"Total de palabras analizadas: $palabrasTotales"'\n/' test2.txt
+	sed -i '1s/^/'"$(date +%F)"'\n/' test2.txt
+	sed -i '1s/^/'"$usuario"'\n/' test2.txt
+	
+	#echo "Un $porcentaje % de las palabras $(cat test2.txt)" > test2.txt
+	#echo "Total de palabras: $palabrasTotales $(cat test2.txt)" > test2.txt
+}
+

@@ -4,61 +4,80 @@
 letraInicial=0
 letraFinal=0
 letraContenida=0
-
+usuario=Luis
 	
+function tildes {
+	# Declara un array asociativo ([a]=aá) (Por eso -A)
+	declare -A letras
+	letras=([a]=aá [e]=eé [i]=ií [o]=oó [u]=uú)
+	vocales=aeiouAEIOU
+	if [[ $vocales =~ $1 ]];
+	then 
+		echo ${letras[$1]} 
+	else 
+		echo $1$1
+	fi
+}
 	
 function letra_inicial { 
 	echo "Ingrese la letra inicial"
 	echo "Si desea salir presione 0"
 	read letra 
+	
 	if [ $letra != 0 ]; then 
-		letraInicial=${letra,,}
-		echo "La letra inicial sera $letraInicial"
-		echo $letraInicial
+		if [ ${#letra} -le 1 ]; then
+			letraInicial=${letra,,}
+			echo "La letra inicial sera $letraInicial"
+			letraInicial=$(tildes $letra) 
+		else 
+			echo "Ingrese una sola letra"
+			letra_inicial
+		fi
 	fi
 }
 
 function letra_contenida { 
 	echo "Ingrese la letra contenida"
 	echo "Si desea salir presione 0"
-	
 	read letra 
+	
 	if [ $letra != 0 ]; then 
-		letraContenida=${letra,,}
-		echo "La letra contenida sera $letraContenida"
+		if [ ${#letra} -le 1 ]; then
+			letraContenida=${letra,,}
+			echo "La letra Final sera $letraContenida"
+			letraContenida=$(tildes $letra) 
+		else 
+			echo "Ingrese una sola letra"
+			letra_inicial
+		fi
 	fi
 }
 
 function letra_final { 
 	echo "Ingrese la letra final"
 	echo "Si desea salir presione 0"
-	
 	read letra 
+	
 	if [ $letra != 0 ]; then 
-		letraFinal=${letra,,}
-		echo "La letra final sera $letraFinal"
-		echo $letraFinal
+		if [ ${#letra} -le 1 ]; then
+			letraFinal=${letra,,}
+			echo "La letra inicial sera $letraFinal"
+			letraFinal=$(tildes $letra) 
+		else 
+			echo "Ingrese una sola letra"
+			letra_inicial
+		fi
 	fi
 }
 
-function tildes {
-	palabra=$1
-	sinTildes=${palabra/á/a}	
-	sinTildes=${sinTildes/á/a};
-	sinTildes=${sinTildes/é/e};
-	sinTildes=${sinTildes/í/i};
-	sinTildes=${sinTildes/ó/o};
-	sinTildes=${sinTildes/ú/u};	
-	echo $sinTildes
-}
-
-
-
-
 function consultar_diccionario () {
-	letraInicial=a
-	letraFinal=o
-	letraContenida=a
+	# Como para tomar los tildes guardamos aá 
+	# y no hay un string aá en las palabras
+	# como queremos ver si tiene a o á 
+	# la dividimos en 2 letras.
+	letraContenidaT=${letraContenida:1:1}
+	letraContenidaST=${letraContenida:0:1}
+	
 	## Chequear letras != 0
 	
 	##Contadores
@@ -66,53 +85,77 @@ function consultar_diccionario () {
 	palabrasTotales=0
 	
 	## Write an remove
-	rm test2.txt
-	output=test2.txt
-	fecha=$(date +%F)
+	output=resultados.txt
 	
+	if [ -e "$output" ];
+	then
+		rm "$output"
+		echo "Generando nuevo archivo"
+	else
+		echo "Generando archivo $output"
+	fi
 	
-	echo " " >> $output
-	echo " " >> $output
-	echo $fecha >> $output
+	echo "" >> $output
+	echo "Lista de palabras encontradas" >> $output
+	echo "_____________________________" >> $output
+	echo "" >> $output
 	
+
 	## Lee linea a linea
-	while IFS= read -r line
+	while IFS= read line; 
 		do
-		
-		if [ ${#line} -ge 3 ]; 
-		then
-
-		echo $line
-		palabra=$(tildes $line) 
+			# Al existir palabras como "autentica verbo"
+			# en el diccionario es necesario borrar "verbo" 
+			# ya que nos dara resultados erroneos.
+			if [[ $line =~ ' ' ]]; 
+			then
+				line=$(echo $line | cut -d' ' -f1)
+			fi
 			
-		largo=$((${#palabra})) ## $(()) deja restar $(#a) largo de a 
-		
-		
-		## Problemas con palabras menos de 3. usar IFS
-			inicial=${palabra:0:1}
-			final=${palabra:largo-1:largo}	
-			contenida=${palabra:1:-1}
-		
-		if [ $inicial == $letraInicial ] && [ $final == $letraFinal ]; 
-		then
+			# Si hay palabras de 1 o 2 caracteres
+			# o reonglones en blanco los ignora.
+			if [ ${#line} -ge 3 ]; 
+			then
 
-			if [[ $contenida =~ $letraContenida ]]; 
-			then 
+			## $(()) deja operar $(#a) largo de a 
+			largo=$((${#line})) 
+			
+			# subStrings -> Palabra
+				inicial=${line:0:1}
+				final=${line:largo-1:largo}	
+				contenida=${line:1:-1} 
+
+			# Realiza varios checks
+			# la funcion [[ $a =~ $b ]] 
+			# revisa si en $a existe el string $b
+			if [[ $letraInicial =~ $inicial ]] && 
+			[[ $letraFinal =~ $final ]] && 
+			([[ $contenida =~ $letraContenidaST ]] || 
+			[[ $contenida =~ $letraContenidaT ]]) ; 
+			then
+				#Escribe palabra y suma
 				cantidadPalabras=$((cantidadPalabras+1))
 				echo $line >> $output
+				fi
 			fi
-		fi
-		palabrasTotales=$((palabrasTotales+1))
-	fi
-	done < test.txt
+		
+			palabrasTotales=$((palabrasTotales+1))
+		done < diccionario.txt
 	
 	
-	porcentaje=$((cantidadPalabras*100/palabrasTotales))
-
 	
-	echo "Un $porcentaje % de las palabras $(cat test2.txt)" > test2.txt
-	echo "Total de palabras: $palabrasTotales $(cat test2.txt)" > test2.txt
+	# Header del documento
+	porcentaje=$(bc <<< "scale=2;($cantidadPalabras*100)/$palabrasTotales")
+	sed -i '1s/^/'"0$porcentaje% de las palabras coinciden."'\n/' $output
+	sed -i '1s/^/'"Total de palabras analizadas: $palabrasTotales"'\n/' $output
+	sed -i '1s/^/'"$(date +%F)"'\n/' $output
+	sed -i '1s/^/'"Usuario: $usuario"'\n/' $output
+	
+	
+	echo "Archivo guardado con nombre $output"
+	
 }
+
 
 
 

@@ -41,7 +41,7 @@ function letra_inicial {
 function letra_contenida { 
 	echo "Ingrese la letra contenida"
 	echo "Si desea salir presione 0"
-	read -p "Ingrese letra: " letra 	
+	read letra 
 	# Verifica si se ingresa 1 o mas letras. 
 	# En caso de ingresar +1 realiza la recursion correspondiente.
 	if [ $letra != 0 ]; then 
@@ -59,7 +59,7 @@ function letra_contenida {
 function letra_final { 
 	echo "Ingrese la letra final"
 	echo "Si desea salir presione 0"
-	read -p "Ingrese letra: " letra 
+	read letra 
 	# Verifica si se ingresa 1 o mas letras. 
 	# En caso de ingresar +1 realiza la recursion correspondiente.
 	if [ $letra != 0 ]; then 
@@ -95,6 +95,8 @@ function reescribir () {
 
 function consultar_diccionario () {
 
+	
+
 	## Valida que se hayan ingresado las 3 letras.
 	if [ $letraInicial == 0 ] || 
 	[ $letraFinal == 0 ] ||
@@ -107,82 +109,100 @@ function consultar_diccionario () {
 	return
 	fi
 
+	reescribir
 	##Contadores
 	cantidadPalabras=0
 	palabrasTotales=0
 
-# Archivo de salida de resultados
-	output=resultados.txt
+
+	# Archivo auxiliar | Ver si puede cambiarse por una variable.
+	auxiliar=auxiliar.txt
+	if [ -e "$auxiliar" ];
+	then
+		rm "$auxiliar"	
+	fi
+
+	
 	if [ -e "$output" ];
 	then
 		echo Sobreescribiendo $output
 		rm "$output"
-		echo "" >> $output # Inicializa el archivo output.
 	else
 		echo "Generando archivo $output"
-		echo "" >> $output # Inicializa el archivo output.
-
 	fi
+	
+	start=$(date +%s.%N) #IGNORAR benchmarking
 
-	## Lee linea a linea del documento diccionario.txt
-	while IFS= read linea; 
+	## Lee linea a linea
+	while IFS= read line; 
 		do
-			# Si hay strings en blanco los ignora.
+			# Si hay palabras de 1 o 2 caracteres
+			# o strings en blanco los ignora.
+			## $(()) permite realizar operaciones 
 			# ${#a} devuelve largo de a 
-			largo=${#linea}			
+			largo=$((${#line})) 				
 
-			if [ $largo -ge 1 ]; 	#-ge (Greater or Equal than / Mayor o igual que) 
+			if [ $largo -ge 3 ]; 
 			then
 				# Al existir palabras como "autentica verbo"
 				# en el diccionario es necesario borrar "verbo" 
 				# ya que nos dara resultados erroneos.
-				if [[ $linea =~ ' ' ]]; 
+				if [[ $line =~ ' ' ]]; 
 				then
-					linea=$(echo $linea | cut -d' ' -f1)		# De las lineas con mas de un campo(field) toma el f1 (field 1)
+					line=$(echo $line | cut -d' ' -f1)
 				fi
 			
 			# subStrings -> Palabra
-				inicial=${linea:0:1} 	# Toma primer valor
-				final=${linea:0-1}		# Si usamos "-1" solo o :0:-1 devuelve toda la linea. es importante usar " -1" o "0-1"
-										# En casos de palabras con un solo caracter (a) toma solamente este caracter.
+				inicial=${line:0:1}
+				contenida=${line:1:-1} 
+				final=${line:0-1}	# Si usamos "-1" solo o :0:-1 devuelve toda la linea. es importante usar " -1" o "0-1" 
 
 			# Realiza varios checks
 			# la funcion [[ $a =~ $b ]] 
 			# revisa si en $a existe el string $b
 			if [[ $letraInicial =~ $inicial ]] && 
 			[[ $letraFinal =~ $final ]] && 
-			[[ $linea =~ $letraContenida ]] 
+			[[ $contenida =~ $letraContenida ]] 
 			then
-				#Escribe palabra y suma al contador
+				#Escribe palabra y suma
 				cantidadPalabras=$((cantidadPalabras+1))
-				echo "$linea" >> $output 	# Agregar $linea entre "" realiza que se guarden los espacios y caracteres especiales
-				fi							# Por algun motivo si la palabra terminaba en tilde, la siguiente no era separada.
+				echo $line >> $auxiliar
+				fi
 			fi
 		
 			palabrasTotales=$((palabrasTotales+1))
 		done < diccionario.txt
 	
-	# Cabezal del documento
-	# Como bash no utiliza valores flotantes si no enteros, utilizamos bc <<< 
-	# scale = 2 seria la cantidad de decimales y nos devuelve un valor tal que .99
-	# Para mostrarlo bien se muestra 0$porcentaje% --> 0.99%
+	# Header del documento
 	porcentaje=$(bc <<< "scale=2;($cantidadPalabras*100)/$palabrasTotales")
 	header="Usuario : $usuario\n$(date +%F)\nTotal de palabras analizadas: $palabrasTotales\nTotal de palabras validas: $cantidadPalabras\n0$porcentaje% de las palabras coinciden.\n"
 	
-	if [ $cantidadPalabras == 0 ]; 
+	if [ $cantidadPalabras != 0 ]; 
 	then 
+#	sed -i "1i\\$header" $auxiliar
+	# Por algun motivo algunas palabras al realizar echo $line >> $auxiliar las ingresa en el mismo renglon
+	# Esta funcion awk busca rapidamente todos los campos que tengan exactamente 2 palabras (Maximo ocurrente) 
+	# y reingresa en ese orden dentro del documento a la segunda palabra en una fila nueva
+	awk 'NF==2 {print $1"\n"$2} NF!=2' $auxiliar > $output
+	rm $auxiliar
+	
+	else 
+	echo "" >> $output	
+
 	echo "No existen palabras para la combinacion:		
 		Letra Inicial: ${letraInicial:1:1}
 		Letra Contenida: ${letraContenida:1:1}
 		Letra Final: ${letraFinal:1:1}
-		Pruebe con otra combinacion"	
+		Pruebe con otra combinacion"
 	fi
-	# sed modifica textos, ahora el usar -i(insert) hace que modifique el texto que se le entrega y lo guarde e nves de mostrarlo.
-	# \\ evita que el $ se tome como caracter y no se conjunte a header para ser variable (Que escriba lo que contiene header enves de "$header")
-	# 1i significa que ingresara todas las lineas (i) en la primer posicion (1). 
-	sed -i "1i\\$header" $output # Agrega cabezal.
+	sed -i "1i\\$header" $output
 
-	echo "Resultados salvados en documento : $output"
+# runtime IGNORAR benchmarking.
+end=$(date +%s.%N)
+runtime=$(echo "$end - $start" | bc)
+
+echo "Finalizado en $runtime segundos"
+	
 }
 
 

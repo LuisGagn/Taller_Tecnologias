@@ -1,7 +1,7 @@
-Usuario : Luis
-2024-04-24
-Total de palabras analizadas: 163819
+Usuario registrado : Luis
+Generado el: 2024-05-01 a las 00:12:00
+Total de palabras analizadas: 174845
 Total de palabras validas: 0
 00% de las palabras coinciden.
 
-
+ 
